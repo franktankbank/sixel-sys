@@ -4,12 +4,8 @@
 extern crate make_cmd;
 extern crate autotools;
 
-use make_cmd::make;
-
 use std::env;
 use std::path::Path;
-use std::fs::canonicalize;
-use std::process::Command;
 use autotools::Config;
 
 
@@ -37,6 +33,7 @@ fn main() {
     let gd = has_feature("gd");
     let python_interface = has_feature("python_interface");
 
+    let msys_type = std::env::var("MSYS_TYPE").unwrap().to_lowercase();
 
     let sixel_dir = Path::new(LIBSIXEL_DIR);
     let sixel_build_dir = sixel_dir.join("build");
@@ -47,7 +44,14 @@ fn main() {
 
     if cfg!(windows) {
         // Path to your Cygwin installation
-        let cygwin_prefix = Path::new("C:/msys64/mingw64/");
+        let cygwin_prefix = match msys_type.as_str(){
+            "clang64"=>Path::new("C:/msys64/clang64/"),
+            "clangarm64"=>Path::new("C:/msys64/clangarm64/"),
+            "mingw32"=>Path::new("C:/msys64/mingw32/"),
+            "mingw64"=>Path::new("C:/msys64/mingw64/"),
+            "ucrt64"=>Path::new("C:/msys64/ucrt64/"),
+            _=>Path::new("C:/msys64/mingw64/")
+        };
 
         // Link to the prebuilt libsixel
         println!("cargo:rustc-link-search=native={}/lib", cygwin_prefix.display());
@@ -131,7 +135,7 @@ println!("cargo::warning={}", dst.display());
         }
 
         cmd.status().expect("Failed to execute ./configure");
-          
+
         make()
             .arg("install")
             .current_dir(sixel_dir)
